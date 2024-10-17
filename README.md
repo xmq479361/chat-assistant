@@ -22,4 +22,5 @@
 本项目使用了 [Element Plus](https://element-plus.org/zh-CN/guide/design.html) 作为 UI 框架，确保界面美观且易于使用。整体采用深色模式样式，背景色为深色，文本颜色为白色。
 
 ## 注意事项
-- 确保在 `.env` 文件中配置 DeepSeek 的 API 密钥。
+- 确保在 `.env.local` 文件中配置 DeepSeek 的 API 密钥。
+- 确保在 `.env.local` 文件中配置 Firebase 的 API 密钥和相关信息。

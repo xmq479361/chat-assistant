@@ -7,6 +7,9 @@
       color: white;
       border-radius: 8px;
       padding: 10px;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
     "
   >
     <div class="header">

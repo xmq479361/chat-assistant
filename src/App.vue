@@ -1,16 +1,12 @@
 <template>
   <div id="app" style="background-color: #1e1e1e; color: white; height: 100vh">
-    <ChatAssistant />
+    <router-view />
   </div>
 </template>
 
 <script>
-import ChatAssistant from "./components/ChatAssistant.vue";
-
 export default {
-  components: {
-    ChatAssistant,
-  },
+  components: {},
 };
 </script>
 
