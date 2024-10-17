@@ -8,9 +8,14 @@
         'user-message': message.role === 'user',
         'ai-message': message.role === 'assistant',
       }"
+      @mouseover="showActions = true"
+      @mouseleave="showActions = false"
     >
       <span>{{ message.content }}</span>
-      <div v-if="message.role === 'assistant'" class="action-buttons">
+      <div
+        v-if="message.role === 'assistant' && showActions"
+        class="action-buttons"
+      >
         <el-button
           type="primary"
           icon="CopyDocument"
@@ -32,6 +37,11 @@ export default {
       type: Array,
       required: true,
     },
+  },
+  data() {
+    return {
+      showActions: false,
+    };
   },
   methods: {
     bestResponse() {
@@ -66,6 +76,7 @@ export default {
   padding: 10px;
   border-radius: 4px;
   max-width: 70%; /* 限制最大宽度 */
+  position: relative; /* 使 action-buttons 相对定位 */
 }
 .user-message {
   align-self: flex-end; /* 用户消息右对齐 */
@@ -78,7 +89,9 @@ export default {
   color: white; /* AI 消息文本颜色 */
 }
 .action-buttons {
-  margin-top: 5px;
+  position: absolute; /* 绝对定位 */
+  left: 0; /* 左侧对齐 */
+  bottom: -30px; /* 底部偏移 */
   display: flex;
   gap: 5px;
 }
