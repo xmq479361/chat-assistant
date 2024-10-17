@@ -6,6 +6,6 @@
 
 body {
   font-family: Avenir, Helvetica, Arial, sans-serif;
-  background-color: #1e1e1e;
-  color: white;
+  background-color: #1e1e1e; /* 深色背景 */
+  color: white; /* 白色文本 */
 }

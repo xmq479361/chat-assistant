@@ -9,7 +9,10 @@
 <script>
 export default {
   props: {
-    messages: Array,
+    messages: {
+      type: Array,
+      required: true,
+    },
   },
 };
 </script>

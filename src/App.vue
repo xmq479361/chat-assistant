@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import ChatAssistant from './components/ChatAssistant.vue';
+import ChatAssistant from "./components/ChatAssistant.vue";
 
 export default {
   components: {

@@ -11,9 +11,8 @@
     <AssistantSelector
       :assistants="assistants"
       :selectedAssistant="currentAssistant?.id"
-      @select-assistant="handleSelectAssistant"
-      @edit-assistant="openEditDialog"
-      @delete-assistant="deleteAssistant"
+      @update-selected="handleSelectAssistant"
+      @update-assistants="onUpdateAssistants"
     />
     <div
       class="chat-area"
@@ -38,10 +37,9 @@
           v-model="userInput"
           :rows="3"
           placeholder="输入您的问题..."
-          @input="adjustHeight"
           style="
-            background-color: black;
-            color: white;
+            background-color: #f0f0f0;
+            color: black;
             border: none;
             border-radius: 4px;
             resize: none;
@@ -63,32 +61,24 @@
           发送
         </el-button>
       </div>
-      <EditAssistantDialog
-        :visible="isEditDialogVisible"
-        :assistant="editAssistant"
-        @save="saveAssistant"
-      />
     </div>
   </div>
 </template>
 
 <script>
-import { sendMessageToDeepSeek } from "../utils/api";
-import { Assistant, Message } from "../models/models";
+import { sendMessageToDeepSeek } from "../utils/api"; // 导入工具类
+import { Assistant, Message } from "../models/models"; // 导入模型
 import AssistantSelector from "./AssistantSelector.vue";
 import MessageList from "./MessageList.vue";
-import EditAssistantDialog from "./EditAssistantDialog.vue";
 
 export default {
-  components: { AssistantSelector, MessageList, EditAssistantDialog },
+  components: { AssistantSelector, MessageList },
   data() {
     return {
       userInput: "",
       messages: [],
       isLoading: false,
       currentAssistant: null,
-      editAssistant: null,
-      isEditDialogVisible: false,
       assistants: [
         new Assistant("1", "助手1", "这是助手1的描述", "默认提示词1", 10),
         new Assistant("2", "助手2", "这是助手2的描述", "默认提示词2", 10),
@@ -96,12 +86,6 @@ export default {
     };
   },
   methods: {
-    adjustHeight() {
-      const lines = this.userInput.split("\n").length;
-      if (lines > 10) {
-        this.userInput = this.userInput.split("\n").slice(0, 10).join("\n"); // 限制为10行
-      }
-    },
     async sendMessage() {
       this.isLoading = true;
       const userMessage = new Message(Date.now(), this.userInput, "user");
@@ -130,25 +114,9 @@ export default {
       );
       console.log(`当前选择的助手 ID: ${id}`);
     },
-    openEditDialog(assistant) {
-      this.editAssistant = assistant;
-      this.isEditDialogVisible = true;
-    },
-    saveAssistant(updatedAssistant) {
-      const index = this.assistants.findIndex(
-        (assistant) => assistant.id === updatedAssistant.id
-      );
-      if (index !== -1) {
-        this.assistants.splice(index, 1, updatedAssistant);
-      }
-    },
-    deleteAssistant(id) {
-      this.assistants = this.assistants.filter(
-        (assistant) => assistant.id !== id
-      );
-      if (this.currentAssistant && this.currentAssistant.id === id) {
-        this.currentAssistant = null; // 清空当前助手
-      }
+    onUpdateAssistants(assistants) {
+      console.log("onUpdateAssistants", assistants);
+      this.assistants = assistants;
     },
   },
 };

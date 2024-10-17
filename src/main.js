@@ -1,7 +1,9 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import ElementPlus from 'element-plus';
-import 'element-plus/dist/index.css'; // 更新此行
+import 'element-plus/dist/index.css'; // 确保引入 Element Plus 的样式
 import './assets/reset.css'; // 引入清除 CSS
 
-createApp(App).use(ElementPlus).mount('#app');
+const app = createApp(App);
+app.use(ElementPlus);
+app.mount('#app');
