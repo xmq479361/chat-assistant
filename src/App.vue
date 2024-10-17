@@ -1,5 +1,5 @@
 <template>
-  <div id="app" style="background-color: #1e1e1e; color: white; height: 100vh;">
+  <div id="app" style="background-color: #1e1e1e; color: white; height: 100vh">
     <ChatAssistant />
   </div>
 </template>

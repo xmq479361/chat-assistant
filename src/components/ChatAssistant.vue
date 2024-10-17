@@ -56,9 +56,8 @@
           :disabled="!userInput || isLoading"
           @click="sendMessage"
           style="background-color: #409eff; color: white; width: 100px"
-          icon="el-icon-sent"
-        >
-          发送
+          icon="ChatRound"
+        >发送
         </el-button>
       </div>
     </div>

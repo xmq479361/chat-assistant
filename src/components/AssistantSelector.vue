@@ -10,9 +10,10 @@
     "
   >
     <div class="header">
-      <el-button type="primary" icon="el-icon-plus" @click="addAssistant"
-        >新增助手</el-button
-      >
+      对话助手列表
+      <el-icon @click="addAssistant" size="20px">
+        <Plus />
+      </el-icon>
     </div>
     <div class="assistant-list">
       <div
@@ -24,15 +25,16 @@
       >
         <span>{{ assistant.name }}</span>
         <div class="actions">
-          <el-button icon="el-icon-edit" @click.stop="editAssistant(assistant)"
-            >编辑</el-button
-          >
+          <el-button
+            icon="Edit"
+            type="primary"
+            @click.stop="editAssistant(assistant)"
+          />
           <el-button
             type="danger"
-            icon="el-icon-delete"
+            icon="Delete"
             @click.stop="confirmDelete(assistant)"
-            >删除</el-button
-          >
+          />
         </div>
       </div>
     </div>
@@ -54,13 +56,22 @@
             { required: true, message: '请输入助手名称', trigger: 'blur' },
           ]"
         >
-          <el-input v-model="localAssistant.name" />
+          <el-input
+            v-model="localAssistant.name"
+            placeholder="请输入助手名称"
+          />
         </el-form-item>
         <el-form-item label="助手描述" prop="description">
-          <el-input v-model="localAssistant.description" />
+          <el-input
+            v-model="localAssistant.description"
+            placeholder="请输入助手描述"
+          />
         </el-form-item>
         <el-form-item label="默认提示词" prop="defaultPrompt">
-          <el-input v-model="localAssistant.defaultPrompt" />
+          <el-input
+            v-model="localAssistant.defaultPrompt"
+            placeholder="请输入默认提示词"
+          />
         </el-form-item>
         <el-form-item label="单轮最大消息数" prop="maxMessages">
           <el-input-number v-model="localAssistant.maxMessages" :min="1" />
@@ -77,6 +88,8 @@
 </template>
 
 <script>
+import { Assistant } from "@/models/models";
+
 export default {
   props: {
     selectedAssistant: {
@@ -99,7 +112,14 @@ export default {
   },
   methods: {
     addAssistant() {
-      this.$emit("add-assistant");
+      this.localAssistant = new Assistant(
+        Date.now().toString(),
+        "",
+        "",
+        "",
+        10
+      ); // 创建一个新的助手实例
+      this.isEditDialogVisible = true; // 显示编辑对话框
     },
     selectAssistant(id) {
       this.$emit("update-selected", id); // 使用 v-model 语法
@@ -126,6 +146,8 @@ export default {
       );
       if (index !== -1) {
         this.localAssistants.splice(index, 1, this.localAssistant); // 更新助手
+      } else {
+        this.localAssistants.push(this.localAssistant); // 新增助手
       }
       this.isEditDialogVisible = false; // 关闭编辑对话框
       this.$emit("update-assistants", this.localAssistants); // 通知父组件更新助手列表
@@ -139,16 +161,20 @@ export default {
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
+  height: 100%;
 }
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
+  padding: 16px;
+  font-size: 16px;
 }
 .assistant-list {
-  max-height: 200px;
   overflow-y: auto;
+  flex: 1;
+  height: 100%;
 }
 .assistant-item {
   display: flex;
