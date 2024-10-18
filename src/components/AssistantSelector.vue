@@ -1,49 +1,45 @@
 <template>
   <div :class="['assistant-selector', { collapsed: isCollapsed }]">
-    <div class="header">
-      <span v-if="!isCollapsed">对话助手列表</span>
-      <el-icon v-if="!isCollapsed" @click="addAssistant" size="20px">
-        <Plus />
-      </el-icon>
-      <el-icon @click="toggleCollapse" size="20px">
-        <Expand v-if="isCollapsed" />
-        <Fold v-else />
-      </el-icon>
+    <div v-if="!isCollapsed" class="icon-collapsed">
+      <div v-if="isMobile">
+        <AssistantSelectorContent
+          :assistants="assistants"
+          @update-add="addAssistant"
+          @update-selected="selectAssistant"
+          @update-edit="editAssistant"
+          @update-collapse="toggleCollapse"
+        />
+      </div>
+      <AssistantSelectorContent
+        v-else
+        :assistants="assistants"
+        @update-add="addAssistant"
+        @update-selected="selectAssistant"
+        @update-edit="editAssistant"
+        @update-collapse="toggleCollapse"
+      />
     </div>
-    <div class="assistant-list">
-      <el-icon v-if="isCollapsed" @click="addAssistant" size="20px">
-        <Plus />
-      </el-icon>
-      <div
-        v-for="assistant in assistants"
-        :key="assistant.id"
-        @click="selectAssistant(assistant)"
-      >
+    <div v-else>
+      <div class="icon-collapsed">
+        <el-icon @click="toggleCollapse" size="20px">
+          <Expand />
+        </el-icon>
+      </div>
+      <div style="margin: 10px 0px">
+        <el-icon @click="addAssistant" size="20px" class="icon-collapsed">
+          <Plus />
+        </el-icon>
+      </div>
+      <el-divider style="margin: 0px" />
+      <div class="assistant-list">
         <div
-          v-if="isCollapsed"
-          class="assistant-item assistant-item-collapsed"
-          :class="{ selected: assistant.selected }"
-        >
-          <span>{{ assistant.name.charAt(0) }}</span>
-        </div>
-        <div
-          v-else
+          v-for="assistant in assistants"
+          :key="assistant.id"
           class="assistant-item"
           :class="{ selected: assistant.selected }"
+          @click="selectAssistant(assistant)"
         >
-          <span>{{ assistant.name }}</span>
-          <div class="actions">
-            <el-button
-              icon="Edit"
-              type="primary"
-              @click.stop="editAssistant(assistant)"
-            />
-            <el-button
-              type="danger"
-              icon="Delete"
-              @click.stop="confirmDelete(assistant)"
-            />
-          </div>
+          <span>{{ assistant.name.charAt(0) }}</span>
         </div>
       </div>
     </div>
@@ -52,11 +48,13 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="isDeleteDialogVisible = false">取消</el-button>
-          <el-button type="danger" @click="deleteAssistant">确认</el-button>
+          <el-button :loading="commiting" type="danger" @click="deleteAssistant"
+            >确认</el-button
+          >
         </div>
       </template>
     </el-dialog>
-    <el-dialog v-model="isEditDialogVisible" title="编辑助手">
+    <el-dialog v-model="isEditDialogVisible" :title="editDialogTitle">
       <el-form :model="localAssistant" ref="form">
         <el-form-item
           label="助手名称"
@@ -89,7 +87,10 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="isEditDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSaveAssistant"
+          <el-button
+            type="primary"
+            @click="handleSaveAssistant"
+            :loading="commiting"
             >保存</el-button
           >
         </div>
@@ -106,8 +107,10 @@ import {
   saveAssistant,
   deleteAssistant,
 } from "../utils/database"; // 导入数据库操作
+import AssistantSelectorContent from "./AssistantSelectorContent.vue";
 
 export default {
+  components: { AssistantSelectorContent },
   props: {
     userId: {
       type: String,
@@ -117,17 +120,26 @@ export default {
   data() {
     return {
       assistants: [],
-      isCollapsed: true, // 控制助手面板的收缩状态
+      isCollapsed: false, // 控制助手面板的收缩状态
       isEditDialogVisible: false, // 控制编辑对话框的显示状态
       isDeleteDialogVisible: false, // 控制删除对话框的显示状态
       assistantToDelete: null, // 当前选中的助手
       localAssistant: null, // 当前编辑的助手
+      editDialogTitle: "编辑助手", // 编辑对话框的标题
+      currentAssistant: null, // 当前选中的助手
+      commiting: false, // 是否正在提交
+      isMobile: false,
     };
   },
-  created() {
+  mounted() {
     this.loadAssistants();
+    this.checkDevice();
   },
   methods: {
+    checkDevice() {
+      const userAgent = navigator.userAgent;
+      this.isMobile = /Mobile|Android|iPhone|iPad/i.test(userAgent);
+    },
     async loadAssistants() {
       this.assistants = await loadAssistants(this.userId); // 从 Firebase 加载助手信息
       if (this.assistants.length === 0) {
@@ -156,18 +168,22 @@ export default {
         "",
         10
       ); // 创建一个新的助手实例
+      this.editDialogTitle = "新增助手"; // 编辑对话框的标题
       this.isEditDialogVisible = true; // 显示编辑对话框
     },
     selectAssistant(assistant) {
-      console.log("selectAssistant", assistant);
-      this.assistants.forEach((assistant) => {
-        assistant.selected = false;
-      });
-      assistant.selected = true;
+      if (
+        null != this.currentAssistant &&
+        this.currentAssistant.id === assistant.id
+      ) {
+        return;
+      }
+      this.currentAssistant = assistant;
       this.$emit("update-selected", assistant); // 使用 v-model 语法
     },
     editAssistant(assistant) {
       this.localAssistant = { ...assistant }; // 创建助手的本地副本
+      this.editDialogTitle = "编辑助手"; // 编辑对话框的标题
       this.isEditDialogVisible = true; // 显示编辑对话框
     },
     confirmDelete(assistant) {
@@ -175,14 +191,17 @@ export default {
       this.isDeleteDialogVisible = true;
     },
     async handleDeleteAssistant() {
+      this.commiting = true;
       deleteAssistant(this.userId, this.assistantToDelete);
-      this.isDeleteDialogVisible = false;
       this.assistants = this.assistants.filter(
         (assistant) => assistant.id !== this.assistantToDelete.id
       );
       this.assistantToDelete = null;
+      this.commiting = false;
+      this.isDeleteDialogVisible = false;
     },
     async handleSaveAssistant() {
+      this.commiting = true;
       const index = this.assistants.findIndex(
         (assistant) => assistant.id === this.localAssistant.id
       );
@@ -190,10 +209,10 @@ export default {
       if (index !== -1) {
         this.assistants.splice(index, 1, this.localAssistant); // 更新助手
       } else {
-        //    result = await add(userRef, this.localAssistant); // 将默认助手存储到 Firebase 数据库
         this.assistants.push(this.localAssistant); // 新增助手
       }
       this.isEditDialogVisible = false; // 关闭编辑对话框
+      this.commiting = false;
     },
   },
 };
@@ -216,13 +235,8 @@ export default {
   min-width: 50px;
   max-width: 50px;
 }
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-  padding: 8px;
-  font-size: 16px;
+.icon-collapsed {
+  padding: 8px 0;
 }
 .assistant-list {
   overflow-y: auto;
@@ -231,10 +245,12 @@ export default {
 }
 .assistant-item {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 8px;
+  margin: 10px 0;
   border-bottom: 1px solid #444;
+  border-radius: 6px;
   cursor: pointer;
 }
 .assistant-item:hover {
@@ -243,21 +259,8 @@ export default {
 .assistant-item.selected {
   background-color: #4a4a4a; /* 选中效果 */
 }
-.assistant-item-collapsed {
-  justify-content: center;
-}
-.actions {
-  display: flex;
-  gap: 5px;
-}
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
-}
-.add-assistant {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 8px;
 }
 </style>
