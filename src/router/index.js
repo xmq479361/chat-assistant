@@ -9,11 +9,6 @@ const routes = [
     component: AuthPage,
   },
   {
-    path: "/auth",
-    name: "AuthPage",
-    component: AuthPage,
-  },
-  {
     path: "/chat",
     name: "ChatAssistant",
     component: ChatAssistant,

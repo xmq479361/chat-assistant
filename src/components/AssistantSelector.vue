@@ -20,7 +20,7 @@
     </div>
     <div class="assistant-list">
       <div
-        v-for="assistant in localAssistants"
+        v-for="assistant in assistants"
         :key="assistant.id"
         class="assistant-item"
         :class="{ selected: selectedAssistant === assistant.id }"
@@ -92,6 +92,7 @@
 
 <script>
 import { Assistant } from "@/models/models";
+import { getDatabase, ref, set, remove } from "firebase/database"; // 导入 Firebase 数据库
 
 export default {
   props: {
@@ -103,20 +104,23 @@ export default {
       type: Array,
       required: true,
     },
+    userId: {
+      type: String,
+      required: true,
+    },
   },
   data() {
     return {
       isDeleteDialogVisible: false,
       assistantToDelete: null,
       isEditDialogVisible: false,
-      localAssistants: [...this.assistants],
       localAssistant: null, // 用于编辑助手的本地副本
     };
   },
   methods: {
     addAssistant() {
       this.localAssistant = new Assistant(
-        Date.now().toString(),
+        this.userId + "_" + Date.now().toString(),
         "",
         "",
         "",
@@ -135,25 +139,44 @@ export default {
       this.assistantToDelete = assistant;
       this.isDeleteDialogVisible = true;
     },
-    deleteAssistant() {
+    async deleteAssistant() {
+      const db = getDatabase();
+      const userRef = ref(
+        db,
+        "users/" + this.userId + "/assistants/" + this.assistantToDelete.id
+      );
+      await remove(userRef, this.assistantToDelete); // 将默认助手存储到 Firebase 数据库
+
       this.isDeleteDialogVisible = false;
-      this.localAssistants = this.localAssistants.filter(
+      var localAssistants = this.assistants.filter(
         (assistant) => assistant.id !== this.assistantToDelete.id
       );
       this.assistantToDelete = null;
-      this.$emit("update-assistants", this.localAssistants); // 通知父组件更新助手列表
+      this.$emit("update-assistants", localAssistants); // 通知父组件更新助手列表
     },
-    saveAssistant() {
+    async saveAssistant() {
       const index = this.assistants.findIndex(
         (assistant) => assistant.id === this.localAssistant.id
       );
+
+      const db = getDatabase();
+      const userRef = ref(
+        db,
+        "users/" + this.userId + "/assistants/" + this.localAssistant.id
+      );
+      var localAssistants = [...this.assistants];
+      var result;
+      result = await set(userRef, this.localAssistant); // 将默认助手存储到 Firebase 数据库
+
+      console.log(result);
       if (index !== -1) {
-        this.localAssistants.splice(index, 1, this.localAssistant); // 更新助手
+        localAssistants.splice(index, 1, this.localAssistant); // 更新助手
       } else {
-        this.localAssistants.push(this.localAssistant); // 新增助手
+        //    result = await add(userRef, this.localAssistant); // 将默认助手存储到 Firebase 数据库
+        localAssistants.push(this.localAssistant); // 新增助手
       }
       this.isEditDialogVisible = false; // 关闭编辑对话框
-      this.$emit("update-assistants", this.localAssistants); // 通知父组件更新助手列表
+      this.$emit("update-assistants", localAssistants); // 通知父组件更新助手列表
     },
   },
 };
