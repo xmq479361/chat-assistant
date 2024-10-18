@@ -8,7 +8,14 @@ export class User {
 }
 
 export class Assistant {
-  constructor(id, name, description, defaultPrompt, maxMessages, selected = false) {
+  constructor(
+    id,
+    name,
+    description,
+    defaultPrompt,
+    maxMessages,
+    selected = false
+  ) {
     this.id = id; // 助手唯一ID
     this.name = name; // 助手名称
     this.description = description; // 助手描述

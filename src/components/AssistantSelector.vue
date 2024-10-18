@@ -1,43 +1,49 @@
 <template>
-  <div
-    class="assistant-selector"
-    style="
-      width: 30vw;
-      background-color: #2c3e50;
-      color: white;
-      border-radius: 8px;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    "
-  >
+  <div :class="['assistant-selector', { collapsed: isCollapsed }]">
     <div class="header">
-      对话助手列表
-      <el-icon @click="addAssistant" size="20px">
+      <span v-if="!isCollapsed">对话助手列表</span>
+      <el-icon v-if="!isCollapsed" @click="addAssistant" size="20px">
         <Plus />
+      </el-icon>
+      <el-icon @click="toggleCollapse" size="20px">
+        <Expand v-if="isCollapsed" />
+        <Fold v-else />
       </el-icon>
     </div>
     <div class="assistant-list">
+      <el-icon v-if="isCollapsed" @click="addAssistant" size="20px">
+        <Plus />
+      </el-icon>
       <div
         v-for="assistant in assistants"
         :key="assistant.id"
-        class="assistant-item"
-        :class="{ selected: selectedAssistant === assistant.id }"
-        @click="selectAssistant(assistant.id)"
+        @click="selectAssistant(assistant)"
       >
-        <span>{{ assistant.name }}</span>
-        <div class="actions">
-          <el-button
-            icon="Edit"
-            type="primary"
-            @click.stop="editAssistant(assistant)"
-          />
-          <el-button
-            type="danger"
-            icon="Delete"
-            @click.stop="confirmDelete(assistant)"
-          />
+        <div
+          v-if="isCollapsed"
+          class="assistant-item assistant-item-collapsed"
+          :class="{ selected: assistant.selected }"
+        >
+          <span>{{ assistant.name.charAt(0) }}</span>
+        </div>
+        <div
+          v-else
+          class="assistant-item"
+          :class="{ selected: assistant.selected }"
+        >
+          <span>{{ assistant.name }}</span>
+          <div class="actions">
+            <el-button
+              icon="Edit"
+              type="primary"
+              @click.stop="editAssistant(assistant)"
+            />
+            <el-button
+              type="danger"
+              icon="Delete"
+              @click.stop="confirmDelete(assistant)"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -83,7 +89,9 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="isEditDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="saveAssistant">保存</el-button>
+          <el-button type="primary" @click="handleSaveAssistant"
+            >保存</el-button
+          >
         </div>
       </template>
     </el-dialog>
@@ -92,18 +100,15 @@
 
 <script>
 import { Assistant } from "@/models/models";
-import { getDatabase, ref, set, remove } from "firebase/database"; // 导入 Firebase 数据库
+import {
+  loadAssistants,
+  createDefaultAssistant,
+  saveAssistant,
+  deleteAssistant,
+} from "../utils/database"; // 导入数据库操作
 
 export default {
   props: {
-    selectedAssistant: {
-      type: String,
-      default: null,
-    },
-    assistants: {
-      type: Array,
-      required: true,
-    },
     userId: {
       type: String,
       required: true,
@@ -111,13 +116,38 @@ export default {
   },
   data() {
     return {
-      isDeleteDialogVisible: false,
-      assistantToDelete: null,
-      isEditDialogVisible: false,
-      localAssistant: null, // 用于编辑助手的本地副本
+      assistants: [],
+      isCollapsed: true, // 控制助手面板的收缩状态
+      isEditDialogVisible: false, // 控制编辑对话框的显示状态
+      isDeleteDialogVisible: false, // 控制删除对话框的显示状态
+      assistantToDelete: null, // 当前选中的助手
+      localAssistant: null, // 当前编辑的助手
     };
   },
+  created() {
+    this.loadAssistants();
+  },
   methods: {
+    async loadAssistants() {
+      this.assistants = await loadAssistants(this.userId); // 从 Firebase 加载助手信息
+      if (this.assistants.length === 0) {
+        this.createDefaultAssistant(); // 如果没有助手，创建默认助手
+      } else {
+        this.selectAssistant(
+          this.assistants.find((assistant) => assistant.selected) ||
+            this.assistants[0]
+        );
+      }
+    },
+    async createDefaultAssistant() {
+      console.log("createDefaultAssistant", this.userId);
+      const defaultAssistant = await createDefaultAssistant(this.userId); // 创建默认助手
+      this.assistants.push(defaultAssistant); // 添加默认助手到助手列表
+      this.selectAssistant(defaultAssistant);
+    },
+    toggleCollapse() {
+      this.isCollapsed = !this.isCollapsed; // 切换收缩状态
+    },
     addAssistant() {
       this.localAssistant = new Assistant(
         this.userId + "_" + Date.now().toString(),
@@ -128,8 +158,13 @@ export default {
       ); // 创建一个新的助手实例
       this.isEditDialogVisible = true; // 显示编辑对话框
     },
-    selectAssistant(id) {
-      this.$emit("update-selected", id); // 使用 v-model 语法
+    selectAssistant(assistant) {
+      console.log("selectAssistant", assistant);
+      this.assistants.forEach((assistant) => {
+        assistant.selected = false;
+      });
+      assistant.selected = true;
+      this.$emit("update-selected", assistant); // 使用 v-model 语法
     },
     editAssistant(assistant) {
       this.localAssistant = { ...assistant }; // 创建助手的本地副本
@@ -139,44 +174,26 @@ export default {
       this.assistantToDelete = assistant;
       this.isDeleteDialogVisible = true;
     },
-    async deleteAssistant() {
-      const db = getDatabase();
-      const userRef = ref(
-        db,
-        "users/" + this.userId + "/assistants/" + this.assistantToDelete.id
-      );
-      await remove(userRef, this.assistantToDelete); // 将默认助手存储到 Firebase 数据库
-
+    async handleDeleteAssistant() {
+      deleteAssistant(this.userId, this.assistantToDelete);
       this.isDeleteDialogVisible = false;
-      var localAssistants = this.assistants.filter(
+      this.assistants = this.assistants.filter(
         (assistant) => assistant.id !== this.assistantToDelete.id
       );
       this.assistantToDelete = null;
-      this.$emit("update-assistants", localAssistants); // 通知父组件更新助手列表
     },
-    async saveAssistant() {
+    async handleSaveAssistant() {
       const index = this.assistants.findIndex(
         (assistant) => assistant.id === this.localAssistant.id
       );
-
-      const db = getDatabase();
-      const userRef = ref(
-        db,
-        "users/" + this.userId + "/assistants/" + this.localAssistant.id
-      );
-      var localAssistants = [...this.assistants];
-      var result;
-      result = await set(userRef, this.localAssistant); // 将默认助手存储到 Firebase 数据库
-
-      console.log(result);
+      saveAssistant(this.userId, this.localAssistant);
       if (index !== -1) {
-        localAssistants.splice(index, 1, this.localAssistant); // 更新助手
+        this.assistants.splice(index, 1, this.localAssistant); // 更新助手
       } else {
         //    result = await add(userRef, this.localAssistant); // 将默认助手存储到 Firebase 数据库
-        localAssistants.push(this.localAssistant); // 新增助手
+        this.assistants.push(this.localAssistant); // 新增助手
       }
       this.isEditDialogVisible = false; // 关闭编辑对话框
-      this.$emit("update-assistants", localAssistants); // 通知父组件更新助手列表
     },
   },
 };
@@ -184,17 +201,27 @@ export default {
 
 <style scoped>
 .assistant-selector {
-  margin-bottom: 20px;
+  width: 30vw; /* 展开时的宽度 */
+  background-color: #2c3e50;
+  color: white;
+  padding: 10px;
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition: width 0.3s; /* 添加过渡效果 */
+  min-width: 200px;
+  max-width: 400px;
+}
+.assistant-selector.collapsed {
+  min-width: 50px;
+  max-width: 50px;
 }
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 10px;
-  padding: 16px;
+  padding: 8px;
   font-size: 16px;
 }
 .assistant-list {
@@ -206,7 +233,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px;
+  padding: 8px;
   border-bottom: 1px solid #444;
   cursor: pointer;
 }
@@ -216,6 +243,9 @@ export default {
 .assistant-item.selected {
   background-color: #4a4a4a; /* 选中效果 */
 }
+.assistant-item-collapsed {
+  justify-content: center;
+}
 .actions {
   display: flex;
   gap: 5px;
@@ -223,5 +253,11 @@ export default {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+.add-assistant {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px;
 }
 </style>
