@@ -1,47 +1,51 @@
 <template>
-  <div :class="['assistant-selector', { collapsed: isCollapsed }]">
-    <div v-if="!isCollapsed" class="icon-collapsed">
-      <div v-if="isMobile">
-        <AssistantSelectorContent
-          :assistants="assistants"
-          @update-add="addAssistant"
-          @update-selected="selectAssistant"
-          @update-edit="editAssistant"
-          @update-collapse="toggleCollapse"
-        />
+  <div v-if="!notCollapsed">
+    <div class="icon-collapsed" style="cursor: pointer; margin-top: 15px">
+      <el-icon @click="toggleCollapse" size="20px">
+        <Expand />
+      </el-icon>
+    </div>
+    <el-divider style="margin: 0px" />
+    <div class="assistant-list">
+      <div
+        v-for="assistant in assistants"
+        :key="assistant.id"
+        class="assistant-item"
+        :class="{ selected: assistant.selected }"
+        @click="selectAssistant(assistant)"
+      >
+        <span>{{ assistant.name.charAt(0) }}</span>
       </div>
+    </div>
+  </div>
+  <div v-else>
+    <div v-if="isMobile">
+      <el-drawer
+        v-model="notCollapsed"
+        size="50%"
+        direction="ltr"
+        :show-close="false"
+        append-to-body="true"
+      >
+        <div :class="assistant - selector">
+          <AssistantSelectorContent
+            :assistants="assistants"
+            @update-add="addAssistant"
+            @update-selected="selectAssistant"
+            @update-edit="editAssistant"
+            @update-collapse="toggleCollapse"
+          />
+        </div>
+      </el-drawer>
+    </div>
+    <div v-else :class="['assistant-selector', { collapsed: !notCollapsed }]">
       <AssistantSelectorContent
-        v-else
         :assistants="assistants"
         @update-add="addAssistant"
         @update-selected="selectAssistant"
         @update-edit="editAssistant"
         @update-collapse="toggleCollapse"
       />
-    </div>
-    <div v-else>
-      <div class="icon-collapsed">
-        <el-icon @click="toggleCollapse" size="20px">
-          <Expand />
-        </el-icon>
-      </div>
-      <div style="margin: 10px 0px">
-        <el-icon @click="addAssistant" size="20px" class="icon-collapsed">
-          <Plus />
-        </el-icon>
-      </div>
-      <el-divider style="margin: 0px" />
-      <div class="assistant-list">
-        <div
-          v-for="assistant in assistants"
-          :key="assistant.id"
-          class="assistant-item"
-          :class="{ selected: assistant.selected }"
-          @click="selectAssistant(assistant)"
-        >
-          <span>{{ assistant.name.charAt(0) }}</span>
-        </div>
-      </div>
     </div>
     <el-dialog v-model="isDeleteDialogVisible" title="确认删除">
       <span>您确定要删除助手 {{ assistantToDelete?.name }} 吗？</span>
@@ -54,7 +58,13 @@
         </div>
       </template>
     </el-dialog>
-    <el-dialog v-model="isEditDialogVisible" :title="editDialogTitle">
+    <el-drawer
+      v-model="isEditDialogVisible"
+      :title="editDialogTitle"
+      size="80%"
+      direction="ltr"
+    >
+      <!-- <el-dialog v-model="isEditDialogVisible" :title="editDialogTitle"> -->
       <el-form :model="localAssistant" ref="form">
         <el-form-item
           label="助手名称"
@@ -77,7 +87,12 @@
         <el-form-item label="默认提示词" prop="defaultPrompt">
           <el-input
             v-model="localAssistant.defaultPrompt"
-            placeholder="请输入默认提示词"
+            type="textarea"
+            placeholder="请输入默认提示词..."
+            class="input-textarea"
+            :autosize="{ minRows: 3, maxRows: 10 }"
+            :maxlength="5000"
+            resize="none"
           />
         </el-form-item>
         <el-form-item label="单轮最大消息数" prop="maxMessages">
@@ -95,7 +110,8 @@
           >
         </div>
       </template>
-    </el-dialog>
+    </el-drawer>
+    <!-- </el-dialog> -->
   </div>
 </template>
 
@@ -120,7 +136,7 @@ export default {
   data() {
     return {
       assistants: [],
-      isCollapsed: false, // 控制助手面板的收缩状态
+      notCollapsed: false, // 控制助手面板的状态
       isEditDialogVisible: false, // 控制编辑对话框的显示状态
       isDeleteDialogVisible: false, // 控制删除对话框的显示状态
       assistantToDelete: null, // 当前选中的助手
@@ -138,7 +154,8 @@ export default {
   methods: {
     checkDevice() {
       const userAgent = navigator.userAgent;
-      this.isMobile = /Mobile|Android|iPhone|iPad/i.test(userAgent);
+      this.isMobile = !/Mobile|Android|iPhone|iPad/i.test(userAgent);
+      console.log("isMobile", this.isMobile);
     },
     async loadAssistants() {
       this.assistants = await loadAssistants(this.userId); // 从 Firebase 加载助手信息
@@ -158,9 +175,9 @@ export default {
       this.selectAssistant(defaultAssistant);
     },
     toggleCollapse() {
-      this.isCollapsed = !this.isCollapsed; // 切换收缩状态
+      this.notCollapsed = !this.notCollapsed; // 切换收缩状态
     },
-    addAssistant() {
+    async addAssistant() {
       this.localAssistant = new Assistant(
         this.userId + "_" + Date.now().toString(),
         "",
@@ -178,7 +195,12 @@ export default {
       ) {
         return;
       }
+
       this.currentAssistant = assistant;
+      this.assistants.forEach((assistant) => {
+        assistant.selected = false;
+      });
+      this.currentAssistant.selected = true;
       this.$emit("update-selected", assistant); // 使用 v-model 语法
     },
     editAssistant(assistant) {
@@ -237,6 +259,10 @@ export default {
 }
 .icon-collapsed {
   padding: 8px 0;
+  border-radius: 6px;
+}
+.icon-collapsed:hover {
+  background-color: #3a3a3a;
 }
 .assistant-list {
   overflow-y: auto;
@@ -262,5 +288,16 @@ export default {
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+}
+.input-textarea {
+  background-color: black;
+  border: none;
+  border-radius: 4px;
+  resize: none;
+  overflow-y: auto;
+  max-height: 300px;
+  flex: 1;
+  margin-right: 10px;
+  max-width: 100%;
 }
 </style>

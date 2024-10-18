@@ -35,18 +35,20 @@
       </div>
       <MessageList :messages="messages" />
       <div class="input-area">
-        <textarea
+        <el-input
           v-model="userInput"
-          :rows="3"
+          type="textarea"
           placeholder="输入您的问题..."
           class="input-textarea"
+          :autosize="{ minRows: 3, maxRows: 10 }"
           :maxlength="5000"
+          resize="none"
         />
         <el-button
           :loading="isLoading"
           :disabled="!userInput || isLoading"
           @click="sendMessage"
-          style="background-color: #409eff; color: white; width: 100px"
+          style="background-color: #409eff; color: white; width: 100p"
           icon="ChatRound"
           >发送
         </el-button>

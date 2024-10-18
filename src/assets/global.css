@@ -1,0 +1,16 @@
+:root {
+    /* 自定义边框颜色 */
+    --el-border-color: #100303;
+    --el-bg-color: #2c3e50;
+    --el-fill-color-blank: #0a1117;
+    --el-input-text-color: #d9dfd8;
+    --el-text-color-regular: #9adf91;
+    --el-fill-color-light: #2c3e50;
+    --el-color-primary: green;
+}
+
+textarea {
+    background-color: #2c3e50;
+    color: #d9dfd8;
+    padding: 6px;
+}
